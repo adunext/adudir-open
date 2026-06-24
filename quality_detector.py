@@ -26,7 +26,17 @@ from services.video_quality_service import (
 
 _logger = logging.getLogger(__name__)
 
-QualityReason = Literal["black_frame", "blurry", "static_frame", "duplicate_asset"]
+QualityReason = Literal[
+    "black_frame", "blurry", "static_frame", "duplicate_asset",
+    # 纯 timeline 元数据维度(无需读源文件):
+    "long_gap",       # 轨道上过长空白留白(节奏断裂)
+    "flash_clip",     # 时长过短的碎片/闪帧(剪切残留)
+    "isolated_clip",  # 叠加轨上远离同伴的孤立片段(常是误拖/忘删)
+    # 节奏维度:
+    "choppy_run",     # 连续 N+ 微切堆叠(机关枪剪)
+    "marathon_clip",  # 远超中位时长的超长未切镜
+    "track_overlap",  # 同轨片段意外重叠(拓扑异常)
+]
 Severity = Literal["low", "medium", "high"]
 DetectionMode = Literal["aggressive", "temperate", "conservative"]
 QualityAction = Literal["keep", "remove"]
@@ -43,6 +53,7 @@ class TimelineClipForQuality:
     trim_end_sec: float = 0.0        # 源文件尾部裁剪
     is_locked: bool = False
     has_audio_or_video: bool = True
+    track_index: int = 0             # 所在轨(留白/孤立按轨判定)
 
 
 @dataclass
@@ -84,6 +95,25 @@ _MODE_THRESHOLDS: dict[DetectionMode, QualityThresholds] = {
 
 def get_mode_thresholds(mode: DetectionMode) -> QualityThresholds:
     return _MODE_THRESHOLDS.get(mode, _MODE_THRESHOLDS["temperate"])
+
+
+# 纯元数据维度的阈值(秒)。激进档更挑剔(更短的留白/更长的碎片就报)。
+@dataclass
+class MetadataThresholds:
+    long_gap_sec: float       # 空白超过这个秒数 → long_gap
+    flash_clip_sec: float     # 片段短于这个秒数 → flash_clip
+    isolation_sec: float      # 到最近同轨片段距离超过 → isolated_clip
+
+
+_METADATA_THRESHOLDS: dict[DetectionMode, MetadataThresholds] = {
+    "aggressive":   MetadataThresholds(long_gap_sec=1.5, flash_clip_sec=0.50, isolation_sec=4.0),
+    "temperate":    MetadataThresholds(long_gap_sec=2.5, flash_clip_sec=0.30, isolation_sec=6.0),
+    "conservative": MetadataThresholds(long_gap_sec=4.0, flash_clip_sec=0.15, isolation_sec=10.0),
+}
+
+
+def get_metadata_thresholds(mode: DetectionMode) -> MetadataThresholds:
+    return _METADATA_THRESHOLDS.get(mode, _METADATA_THRESHOLDS["temperate"])
 
 
 # ── 1. video quality marks (per clip) ─────────────────────────────────
@@ -195,4 +225,117 @@ def detect_duplicate_assets(clips: list[TimelineClipForQuality]) -> list[Quality
             suggested_action="keep",  # 可能是刻意复用做切镜，默认让用户决定
             related_clip_ids=[c.clip_id, first.clip_id],
         ))
+    return out
+
+
+# ── 3. timeline 元数据维度(纯逻辑,零媒体访问)──────────────────────────
+
+
+def _by_track(clips: list[TimelineClipForQuality]) -> dict[int, list[TimelineClipForQuality]]:
+    out: dict[int, list[TimelineClipForQuality]] = {}
+    for c in clips:
+        out.setdefault(c.track_index, []).append(c)
+    for arr in out.values():
+        arr.sort(key=lambda c: c.timeline_start_sec)
+    return out
+
+
+def detect_long_gaps(
+    clips: list[TimelineClipForQuality], *, min_gap_sec: float = 2.5,
+) -> list[QualityMark]:
+    """每条轨道上相邻片段间 > min_gap_sec 的空白留白 → long_gap 标记。
+
+    诊断性质(非自动改):提示节奏断裂处,suggested_action='keep' 交用户决定
+    是收紧还是有意留白。锁定轨跳过。"""
+    out: list[QualityMark] = []
+    for ti, arr in _by_track(clips).items():
+        usable = [c for c in arr if not c.is_locked]
+        for prev, cur in zip(usable, usable[1:]):
+            prev_end = prev.timeline_start_sec + prev.duration_sec
+            gap = cur.timeline_start_sec - prev_end
+            if gap <= min_gap_sec:
+                continue
+            sev: Severity = (
+                "high" if gap > min_gap_sec * 3
+                else "medium" if gap > min_gap_sec * 1.8
+                else "low"
+            )
+            out.append(QualityMark(
+                id=f"gap-{ti}-{int(round(prev_end * 1000))}",
+                reason="long_gap",
+                severity=sev,
+                start_sec=prev_end,
+                end_sec=cur.timeline_start_sec,
+                description=f"{gap:.1f}s 空白留白(轨 {ti + 1})",
+                suggested_action="keep",
+                related_clip_ids=[prev.clip_id, cur.clip_id],
+            ))
+    return out
+
+
+def detect_flash_clips(
+    clips: list[TimelineClipForQuality], *, max_clip_sec: float = 0.30,
+) -> list[QualityMark]:
+    """时长 < max_clip_sec 的碎片/闪帧(常是剪切残留,播放时一闪而过)→ flash_clip。
+
+    suggested_action='remove'。锁定轨 / 非媒体 clip 跳过。"""
+    out: list[QualityMark] = []
+    for c in clips:
+        if c.is_locked or not c.has_audio_or_video:
+            continue
+        if c.duration_sec >= max_clip_sec:
+            continue
+        sev: Severity = "high" if c.duration_sec < max_clip_sec * 0.5 else "medium"
+        out.append(QualityMark(
+            id=f"flash-{c.clip_id}",
+            reason="flash_clip",
+            severity=sev,
+            start_sec=c.timeline_start_sec,
+            end_sec=c.timeline_start_sec + c.duration_sec,
+            description=f"{c.duration_sec:.2f}s 碎片/闪帧(剪切残留?)",
+            suggested_action="remove",
+            related_clip_ids=[c.clip_id],
+        ))
+    return out
+
+
+def detect_isolated_clips(
+    clips: list[TimelineClipForQuality], *,
+    isolation_sec: float = 6.0,
+    overlay_min_track: int = 1,
+) -> list[QualityMark]:
+    """叠加轨(track_index >= overlay_min_track)上、到最近同轨片段距离都
+    > isolation_sec 的孤立片段(常是误拖/忘删)→ isolated_clip。
+
+    只看叠加轨(主轨上片段间隔大很正常);该轨须 ≥2 片(单片轨不算"孤立于同伴")。
+    severity low、suggested_action='keep'。锁定轨 / 非媒体跳过。"""
+    out: list[QualityMark] = []
+    for ti, arr in _by_track(clips).items():
+        if ti < overlay_min_track:
+            continue
+        usable = [c for c in arr if not c.is_locked and c.has_audio_or_video]
+        if len(usable) < 2:
+            continue
+        for i, c in enumerate(usable):
+            prev_gap = (
+                c.timeline_start_sec - (usable[i - 1].timeline_start_sec + usable[i - 1].duration_sec)
+                if i > 0 else float("inf")
+            )
+            next_gap = (
+                usable[i + 1].timeline_start_sec - (c.timeline_start_sec + c.duration_sec)
+                if i + 1 < len(usable) else float("inf")
+            )
+            nearest = min(prev_gap, next_gap)
+            if nearest <= isolation_sec:
+                continue
+            out.append(QualityMark(
+                id=f"isolated-{c.clip_id}",
+                reason="isolated_clip",
+                severity="low",
+                start_sec=c.timeline_start_sec,
+                end_sec=c.timeline_start_sec + c.duration_sec,
+                description=f"孤立片段(轨 {ti + 1},距最近片段 {nearest:.1f}s,可能误拖/忘删)",
+                suggested_action="keep",
+                related_clip_ids=[c.clip_id],
+            ))
     return out
