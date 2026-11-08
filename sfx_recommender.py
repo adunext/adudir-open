@@ -88,9 +88,16 @@ def _entry_match_score(
 
     最终分数归一化到 0..1：score = hits / (query_tokens 长度 × 2)
     """
-    title_lower = (getattr(entry, "title", "") or "").lower()
+    title_lower = (
+        (getattr(entry, "title", "") or "") + " " + (getattr(entry, "title_en", "") or "")
+    ).lower()
     tags_lower = [t.lower() for t in (getattr(entry, "tags", []) or [])]
     category = (getattr(entry, "category", "") or "").lower()
+    subcategory = (getattr(entry, "subcategory", "") or "").lower()
+    # 内置库富标注：用途/描述作为弱信号（写的是画面里发生的事，如「卡片翻面」「数字跳动停下」）
+    usage_lower = " ".join(
+        [getattr(entry, "description", "") or ""] + list(getattr(entry, "use_for", []) or [])
+    ).lower()
 
     hits = 0.0
     matched: list[str] = []
@@ -114,13 +121,21 @@ def _entry_match_score(
             if chinese_tag_match:
                 continue
         # category 命中 — 仅当 query 提到分类名（如 "whoosh"/"impact"）
-        if tok == category:
+        if tok == category or (subcategory and tok in subcategory):
             hits += 1.0
             matched.append(tok)
             continue
         # title 包含 — 中英文都走 substring 匹配
         if tok in title_lower:
             hits += 1.0
+            matched.append(tok)
+            continue
+        # 用途/描述包含 — 中文 query 整段或其 2 字片段命中都算
+        if usage_lower and (tok in usage_lower or (
+            _is_chinese(tok) and len(tok) >= 4
+            and sum(tok[i:i + 2] in usage_lower for i in range(len(tok) - 1)) >= max(2, (len(tok) - 1) // 2)
+        )):
+            hits += 0.75
             matched.append(tok)
             continue
 
@@ -170,11 +185,27 @@ def recommend_sfx_by_query(
             matched_tokens=matched,
         ))
 
-    # 按分数降序 → 同分按时长升序（短的优先）
+    # 按分数降序 → 同分先取标注质量高的（未评=0 排后）→ 再按时长升序（短的优先）
     scored.sort(
-        key=lambda r: (-r.score, getattr(r.entry, "duration_sec", 0.0) or 999.0),
+        key=lambda r: (
+            -r.score,
+            -(getattr(r.entry, "quality", 0) or 0),
+            getattr(r.entry, "duration_sec", 0.0) or 999.0,
+        ),
     )
-    return scored[:top_k]
+    # 同组变体（内置库 family）先各出一条，名额不够再补其余变体，避免前几名全是同一声音的 _000/_001
+    seen_family: set[str] = set()
+    first: list[SfxRecommendation] = []
+    rest: list[SfxRecommendation] = []
+    for r in scored:
+        fam = getattr(r.entry, "family", "") or ""
+        if fam and fam in seen_family:
+            rest.append(r)
+            continue
+        if fam:
+            seen_family.add(fam)
+        first.append(r)
+    return (first + rest)[:top_k]
 
 
 __all__ = ["SfxRecommendation", "recommend_sfx_by_query"]
