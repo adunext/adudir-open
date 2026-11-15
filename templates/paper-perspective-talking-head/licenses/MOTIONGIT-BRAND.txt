@@ -1,0 +1,3 @@
+本目录下的动画文件是中性占位（一个渐显的圆环），用来保持模板的文件结构和署名角标的时间逻辑完整。
+This folder holds neutral placeholder animations (a fading ring) that keep the template's file layout and
+corner-attribution timing intact. Replace them with your own mark if you want one.

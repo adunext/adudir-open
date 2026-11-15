@@ -1,0 +1,8 @@
+# gitleaks configuration for the pre-publication self-check.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "SHA-256 digest recorded for the file media-input-keys.json in template integrity manifests; a file hash, not a credential"
+regexTarget = "match"
+regexes = ['''media-input-keys\.json":\s*"[0-9a-f]{64}"''']

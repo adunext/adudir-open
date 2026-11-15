@@ -1,0 +1,4 @@
+previews/cover.jpg 与 previews/cover-portrait.jpg 是模板画面截图，演示人物的位置换成了纸色圆盘占位。
+示例配音、演示人物视频与默认配乐没有放进本目录。
+The cover images are template screenshots with the demo presenter replaced by a plain placeholder disc.
+Demo narration, presenter video and the default music track are not included.
