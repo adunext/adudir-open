@@ -1,0 +1,80 @@
+{
+  "schema": "motiongit-guide/1",
+  "template": "template-02-expanded",
+  "name": "纸面透视 · 口播讲解",
+  "description": "示例使用指南：只保留结构，说明 guide.json 里写什么。",
+  "purpose": "用纸面透视、卡片层次和图文关系配合口播，适合方法拆解与结构化知识。",
+  "firstReply": "这个模板适合把一期口播讲清楚。你这期想表达什么？已有的文稿、口播视频或图片可以直接给我。",
+  "fit": {
+    "genres": [
+      "talking-head",
+      "knowledge"
+    ],
+    "goodFor": [
+      "关键词与观点的强调",
+      "步骤、对比和结论"
+    ],
+    "notFor": [
+      "需要真实产品画面的广告"
+    ]
+  },
+  "materials": [
+    {
+      "role": "video.presenter",
+      "required": false,
+      "use": "本期口播视频"
+    },
+    {
+      "role": "text.script",
+      "required": false,
+      "use": "文稿或字幕"
+    },
+    {
+      "role": "image",
+      "required": false,
+      "use": "品牌标识和配图"
+    }
+  ],
+  "paramGroups": [
+    {
+      "id": "layout",
+      "title": "画幅",
+      "params": [
+        "layout"
+      ]
+    },
+    {
+      "id": "brand",
+      "title": "品牌",
+      "params": [
+        "brandName",
+        "accentColor",
+        "paperColor",
+        "logo"
+      ]
+    },
+    {
+      "id": "text",
+      "title": "文字",
+      "params": [
+        "title",
+        "subtitle",
+        "keywords"
+      ]
+    },
+    {
+      "id": "media",
+      "title": "图片",
+      "params": [
+        "coverImage"
+      ]
+    },
+    {
+      "id": "style",
+      "title": "样式",
+      "params": [
+        "showGrid"
+      ]
+    }
+  ]
+}

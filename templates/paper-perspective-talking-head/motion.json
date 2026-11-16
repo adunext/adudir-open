@@ -1,0 +1,56 @@
+{
+  "format": "motiongit-template",
+  "specVersion": "0.1.0-draft.1",
+  "template": {
+    "id": "template-02-expanded",
+    "version": "2.7.9",
+    "name": "纸面透视 · 口播讲解",
+    "description": "示例清单：只保留 .motion 模板清单的格式骨架，用来说明各字段怎么写；不含运行代码，运行入口没有列出。",
+    "language": "zh"
+  },
+  "runtime": {
+    "profile": "adu-authored-unit/1"
+  },
+  "parameters": {
+    "schema": "params.schema.json",
+    "defaultPreset": "presets/demo.json"
+  },
+  "output": {
+    "width": 1920,
+    "height": 1080,
+    "fps": {
+      "num": 60,
+      "den": 1
+    },
+    "layouts": {
+      "landscape": {
+        "width": 1920,
+        "height": 1080
+      },
+      "portrait": {
+        "width": 1080,
+        "height": 1920
+      }
+    },
+    "defaultLayout": "landscape"
+  },
+  "preview": {
+    "cover": "previews/cover.jpg",
+    "portraitCover": "previews/cover-portrait.jpg"
+  },
+  "ai": {
+    "entry": "guide.json",
+    "guide": "guide.json"
+  },
+  "license": {
+    "id": "MIT",
+    "file": "licenses/TEMPLATE-LICENSE.txt"
+  },
+  "motiongit": {
+    "template_url": "https://motiongit.com/@adunext/template-02-expanded",
+    "brand": {
+      "video": "brand/motiongit-circle-lighter.webm",
+      "gif": "brand/motiongit-circle-lighter.gif"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "layout": "landscape",
+  "brandName": "阿杜导演",
+  "accentColor": "#2FD3B4",
+  "paperColor": "#F4EFE6",
+  "title": "先说明条件，再给出判断",
+  "subtitle": "把要点放在一张纸上",
+  "keywords": [
+    "条件",
+    "判断"
+  ],
+  "showGrid": true
+}

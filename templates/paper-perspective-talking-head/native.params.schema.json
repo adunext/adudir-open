@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "纸面透视 · 口播讲解：竖屏参数示例",
+  "description": "第二份示例参数合同，说明同一模板可以为不同画幅提供不同的参数合同。",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "brandName": {
+      "type": "string",
+      "maxLength": 16,
+      "default": "阿杜导演",
+      "title": "品牌名"
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 16,
+      "default": "先说明条件",
+      "title": "标题文字"
+    },
+    "accentColor": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "format": "color",
+      "default": "#2FD3B4",
+      "title": "主色"
+    },
+    "coverImage": {
+      "type": "string",
+      "format": "uri-reference",
+      "contentMediaType": "image/*",
+      "title": "配图"
+    }
+  }
+}

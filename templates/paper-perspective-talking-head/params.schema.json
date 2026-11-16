@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "纸面透视 · 口播讲解：参数示例",
+  "description": "示例参数合同：只列出几项，说明参数合同长什么样。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "title"
+  ],
+  "properties": {
+    "layout": {
+      "type": "string",
+      "enum": [
+        "landscape",
+        "portrait"
+      ],
+      "default": "landscape",
+      "title": "画幅",
+      "x-group": "layout"
+    },
+    "brandName": {
+      "type": "string",
+      "maxLength": 24,
+      "default": "阿杜导演",
+      "title": "品牌名",
+      "x-group": "brand"
+    },
+    "accentColor": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "format": "color",
+      "default": "#2FD3B4",
+      "title": "主色",
+      "x-group": "brand"
+    },
+    "paperColor": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "format": "color",
+      "default": "#F4EFE6",
+      "title": "纸面底色",
+      "x-group": "brand"
+    },
+    "logo": {
+      "type": "string",
+      "format": "uri-reference",
+      "contentMediaType": "image/*",
+      "title": "品牌标识图片",
+      "x-group": "brand"
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 24,
+      "default": "先说明条件，再给出判断",
+      "title": "标题文字",
+      "x-group": "text"
+    },
+    "subtitle": {
+      "type": "string",
+      "maxLength": 40,
+      "default": "把要点放在一张纸上",
+      "title": "副标题",
+      "x-group": "text"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 8
+      },
+      "maxItems": 3,
+      "default": [
+        "条件",
+        "判断"
+      ],
+      "title": "关键词",
+      "x-group": "text"
+    },
+    "coverImage": {
+      "type": "string",
+      "format": "uri-reference",
+      "contentMediaType": "image/*",
+      "title": "配图",
+      "x-group": "media"
+    },
+    "showGrid": {
+      "type": "boolean",
+      "default": true,
+      "title": "背景网格",
+      "x-group": "style"
+    }
+  }
+}

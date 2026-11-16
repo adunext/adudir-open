@@ -78,7 +78,6 @@ my-template.motion            (ZIP)
 | `template.description` / `template.language` | 简介、语言 |
 | `runtime.engine` | 运行引擎的名字和版本 |
 | `parameters.schema` / `parameters.defaultPreset` | 参数合同和默认参数 |
-| `output.durationPolicy` | 时长怎么定：固定秒数，或跟着配音走（`fit-voiceover`） |
 | `output.layouts` | 横屏、竖屏各自的尺寸 |
 | `ai.entry` / `ai.guide` | AI 助手先读哪个文件 |
 | `preview.cover` / `preview.portraitCover` | 封面 |
@@ -163,7 +162,7 @@ window.film.params = {
 
 ### 5.2 生成式模板的参数
 
-写在 `params.schema.json` 里，用 JSON Schema 描述整部片子可以填的内容，比如画幅、时长和每一段显示的文字。例子见本仓库模板的 `presets/`。
+写在 `params.schema.json` 里，用 JSON Schema 描述整部片子可以填的内容，比如画幅、品牌名、标题文字、主色和图片。例子见本仓库模板的 `params.schema.json` 和 `presets/`。
 
 ---
 
@@ -182,11 +181,11 @@ window.film.params = {
 
 | 字段 | 作用 |
 |---|---|
+| `template` / `name` / `purpose` | 模板是哪一个、做什么用 |
 | `firstReply` | 打开模板后，助手先对用户说的第一句话 |
-| `materials` | 需要哪些素材，哪些必需，缺了怎么办 |
-| `fit` / `duration` | 适合什么内容，时长怎么定 |
-| `selection` / `styles` | 怎么按内容选动画 |
-| `conversation` | 对话约定：不让用户填技术表格，按用户已有的素材选路线 |
+| `fit` | 适合什么内容，不适合什么 |
+| `materials` | 需要哪些素材，哪些必需 |
+| `paramGroups` | 参数怎么分组，对应参数面板上的分区 |
 
 一份好的指南让助手**先理解用户的内容，再选动画**，而不是把示例原样套上去。
 
@@ -278,10 +277,10 @@ sequenceDiagram
 
 [`templates/paper-perspective-talking-head/`](../templates/paper-perspective-talking-head/) 是一个生成式口播模板的**结构示例**，只含说明性的文件，不含运行代码：
 
-- `motion.json`：模板身份、输出规格（横屏 1920×1080、竖屏 1080×1920，60fps）、参数入口和许可。其中指向代码和引擎的入口保持原样，只为展示完整的清单写法，对应文件没有放进仓库。
-- `params.schema.json`、`native.params.schema.json`：参数合同。
-- `presets/`：示例参数。
-- `guide.json`：给 AI 助手的使用指南。
+- `motion.json`：示例清单，只保留格式字段的骨架（身份、输出规格、参数入口、封面、许可）。不含运行代码，所以没有列出运行入口。
+- `params.schema.json`、`native.params.schema.json`：示例参数合同，十项以内（品牌名、标题文字、主色、图片……）。
+- `presets/`：按示例合同填好的两组参数。
+- `guide.json`：示例使用指南（模板名、用途、适合的素材、参数分组）。
 - `previews/`：横屏、竖屏封面。
 - `licenses/`、`assets/fonts/`：许可和随包字体。
 
@@ -309,5 +308,6 @@ sequenceDiagram
   project), preview (the editor owns the clock, audio is master; seek / play / update ↔ ready / seeked / played /
   updated), replace content (overrides in the project, never in the template), export (pages per frame, footage
   decoded directly, composited on one frame grid, audio mixed separately).
-- The template in this repo is a **structure example**: manifest, parameter contracts, presets, guide, previews,
-  licenses and fonts only, no runtime code. Rendering is done in ADu Director and MotionGit.
+- The template in this repo is a **structure example**: an example manifest (format skeleton, no runtime entry), an
+  example guide, example parameter contracts with ten fields or fewer, two presets, previews, licenses and fonts; no
+  runtime code. Rendering is done in ADu Director and MotionGit.
