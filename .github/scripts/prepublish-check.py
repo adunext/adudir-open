@@ -6,7 +6,8 @@ usage: python3 .github/scripts/prepublish-check.py [--source-repo PATH] [--repor
 Checks
   1. Tracked files (and every path in history) live only under docs/, brand/, .github/, are top-level README* /
      LICENSE* files, or are one of the descriptive files of the template structure example (TEMPLATE_KEEP).
-     No code files (.py .js .mjs .ts .html .css ...) anywhere outside .github/, in the tree or in history.
+     No code files (.py .js .mjs .ts .html .css ...) anywhere outside .github/, in the tree or in history, except the
+     few small helper algorithms kept on purpose with their history (KEPT_CODE).
   2. No commit id of the source repository appears in this history: not as a commit id, and not as a
      10+ character hex token in any commit message or file of any commit (needs --source-repo).
   3. No other path of the source repository appears in history (backend/, electron/, packages/, frontend/, ...).
@@ -27,6 +28,8 @@ TEMPLATE_KEEP = re.compile(r"^templates/paper-perspective-talking-head/("
                            r"|media-input-keys\.json|presets/[^/]+\.json|previews/[^/]+\.jpg"
                            r"|brand/[^/]+\.(webm|gif)|assets/fonts/[^/]+\.woff2|assets/font-provenance\.json"
                            r"|licenses/[^/]+\.(txt|json))$")
+# A few small, non-core helper algorithms kept on purpose, with their original history (owner decision 2026-11-16).
+KEPT_CODE = ("bgm_format.py", "finishing_loudness.py", "finishing_neardup.py", "quality_detector.py", "sfx_recommender.py")
 CODE_EXT = re.compile(r"\.(py|pyc|js|mjs|cjs|jsx|ts|tsx|html?|css|sh|bash|zsh|ps1|bat|cmd|go|rs|java|kt|swift|c|cc|cpp|h|hpp|m|mm|rb|php|lua|wasm|node)$", re.I)
 LICENSE_TEXT = re.compile(r"(^LICENSE$|(^|/)licenses/[^/]*(OFL|LICENSE)[^/]*\.txt$)")
 MEDIA_EXT = re.compile(r"\.(png|jpe?g|gif|webp|webm|mp4|mov|woff2?|ttf|otf|ico|icns)$", re.I)
@@ -49,7 +52,7 @@ def git(*args, cwd=None, ok=(0,)):
 
 def path_ok(p):
     return (p.startswith(ALLOWED_DIRS) or ("/" not in p and ALLOWED_TOP.match(p) is not None)
-            or TEMPLATE_KEEP.match(p) is not None)
+            or TEMPLATE_KEEP.match(p) is not None or p in KEPT_CODE)
 
 
 def main():
@@ -77,7 +80,7 @@ def main():
            f"{len(hist_paths)} distinct paths; outside: {bad_hist[:10]}")
     record("3. 历史中没有其它源仓库路径 / no other source-repo paths", not foreign,
            f"foreign paths: {foreign[:10]}")
-    code = sorted(p for p in hist_paths if CODE_EXT.search(p) and not p.startswith(".github/"))
+    code = sorted(p for p in hist_paths if CODE_EXT.search(p) and not p.startswith(".github/") and p not in KEPT_CODE)
     record("1c. 树和历史里没有代码文件 / no code files in tree or history (outside .github/)", not code,
            f"code paths: {code[:10]}")
     named = sorted(p for p in hist_paths if FORBIDDEN_NAMES.search(p))
@@ -166,11 +169,13 @@ def main():
         same_all = sorted(p for paths in same.values() for p in paths)
         same_media = [p for p in same_all if MEDIA_EXT.search(p)]
         same_license = [p for p in same_all if LICENSE_TEXT.search(p)]
-        same_code = [p for p in same_all if p not in same_media and p not in same_license]
+        same_kept = [p for p in same_all if p in KEPT_CODE]
+        same_code = [p for p in same_all if p not in same_media and p not in same_license and p not in same_kept]
         record("7. 与源仓库内容零相同（图片、字体、视频和标准许可文本除外）/ no file content equal to any source-repo object (media and standard license texts excepted)",
                bool(src_objs) and not same_code,
                f"{len(blobs)} distinct file contents vs {len(src_objs)} source blobs; equal non-media files: {len(same_code)} {same_code[:10]}; "
-               f"equal media files: {len(same_media)}; equal standard license texts (MIT / OFL): {len(same_license)} {same_license}")
+               f"equal media files: {len(same_media)}; equal standard license texts (MIT / OFL): {len(same_license)} {same_license}; "
+               f"equal kept helper algorithms (KEPT_CODE): {len(same_kept)} {sorted(set(same_kept))}")
     else:
         record("7. 与源仓库内容零相同（图片、字体、视频和标准许可文本除外）/ no file content equal to any source-repo object (media and standard license texts excepted)",
                False, "skipped: pass --source-repo")
